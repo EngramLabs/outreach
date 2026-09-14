@@ -1,0 +1,161 @@
+import { NextRequest } from "next/server";
+import { db } from "@/lib/db";
+import { requireSession } from "@/lib/auth";
+import { PIPELINE_ORDER, TERMINAL_STATUSES } from "@/lib/constants";
+import { addDays, endOfDay, startOfDay } from "@/lib/normalize";
+import { serializeProspectRow } from "@/lib/query-utils";
+import type { DashboardData } from "@/lib/types";
+
+export async function GET(req: NextRequest) {
+  const guard = await requireSession(req);
+  if ("response" in guard) return guard.response;
+
+  const now = new Date();
+  const todayStart = startOfDay(now);
+  const todayEnd = endOfDay(now);
+  const d14 = addDays(now, -14);
+  const d30 = addDays(now, -30);
+
+  const [
+    overdueCount,
+    dueTodayCount,
+    recentAcceptances,
+    recentReplies,
+    needsVerificationCount,
+    recentlyAdded,
+    researchQueueCount,
+    statusCounts,
+    recentActivityRaw,
+    activitiesInWindow,
+    requests30,
+    accepted30,
+    messages30,
+    replies30,
+    meetings30,
+    conversions,
+    totalProspects,
+    totalCompanies,
+    activeCampaigns,
+    archivedProspects,
+  ] = await Promise.all([
+    db.prospect.count({
+      where: { nextFollowUpDate: { lt: todayStart }, archivedAt: null, status: { notIn: TERMINAL_STATUSES } },
+    }),
+    db.prospect.count({
+      where: { nextFollowUpDate: { gte: todayStart, lte: todayEnd }, archivedAt: null, status: { notIn: TERMINAL_STATUSES } },
+    }),
+    db.activity.findMany({
+      where: { activityType: "Connection Accepted", occurredAt: { gte: d14 } },
+      orderBy: { occurredAt: "desc" },
+      take: 6,
+      include: { prospect: true, company: { select: { name: true } }, campaign: { select: { name: true } } },
+    }),
+    db.activity.findMany({
+      where: { activityType: "Reply Received", occurredAt: { gte: d14 } },
+      orderBy: { occurredAt: "desc" },
+      take: 6,
+      include: { prospect: true, company: { select: { name: true } }, campaign: { select: { name: true } } },
+    }),
+    db.prospect.count({ where: { status: "Needs Verification", archivedAt: null } }),
+    db.prospect.findMany({
+      where: { dateAdded: { gte: d14 }, archivedAt: null },
+      orderBy: { dateAdded: "desc" },
+      take: 6,
+      include: { company: { select: { id: true, name: true } }, campaign: { select: { id: true, name: true } } },
+    }),
+    db.prospect.count({ where: { status: "Researching", archivedAt: null } }),
+    db.prospect.groupBy({ by: ["status"], where: { archivedAt: null }, _count: { _all: true } }),
+    db.activity.findMany({
+      orderBy: { occurredAt: "desc" },
+      take: 12,
+      include: {
+        prospect: { select: { firstName: true, lastName: true } },
+        company: { select: { name: true } },
+        campaign: { select: { name: true } },
+      },
+    }),
+    // Activity volume, 14 days
+    db.activity.findMany({
+      where: { occurredAt: { gte: d14 } },
+      select: { occurredAt: true },
+    }),
+    db.activity.count({ where: { activityType: "Connection Request", occurredAt: { gte: d30 } } }),
+    db.activity.count({ where: { activityType: "Connection Accepted", occurredAt: { gte: d30 } } }),
+    db.activity.count({
+      where: { activityType: { in: ["Message Sent", "Follow-Up Sent"] }, occurredAt: { gte: d30 } },
+    }),
+    db.activity.count({ where: { activityType: "Reply Received", occurredAt: { gte: d30 } } }),
+    db.activity.count({ where: { activityType: "Meeting", occurredAt: { gte: d30 } } }),
+    db.prospect.count({ where: { status: "Converted" } }),
+    db.prospect.count({ where: { archivedAt: null } }),
+    db.company.count({ where: { status: "Active" } }),
+    db.campaign.count({ where: { status: "Active" } }),
+    db.prospect.count({ where: { archivedAt: { not: null } } }),
+  ]);
+
+  // Activity volume by day (14 days, zero-filled).
+  const volumeMap = new Map<string, number>();
+  for (const a of activitiesInWindow) {
+    const key = startOfDay(a.occurredAt).toISOString().slice(0, 10);
+    volumeMap.set(key, (volumeMap.get(key) ?? 0) + 1);
+  }
+  const activityVolume: { date: string; count: number }[] = [];
+  for (let i = 13; i >= 0; i--) {
+    const key = startOfDay(addDays(now, -i)).toISOString().slice(0, 10);
+    activityVolume.push({ date: key, count: volumeMap.get(key) ?? 0 });
+  }
+
+  const pipeline = PIPELINE_ORDER.map((status) => ({
+    status,
+    count: statusCounts.find((s) => s.status === status)?._count._all ?? 0,
+  }));
+
+  const serializeActivity = (a: (typeof recentActivityRaw)[number]) => ({
+    id: a.id,
+    prospectId: a.prospectId,
+    prospectName: a.prospect
+      ? `${a.prospect.firstName}${a.prospect.lastName ? " " + a.prospect.lastName : ""}`
+      : null,
+    companyId: a.companyId,
+    companyName: a.company?.name ?? null,
+    campaignId: a.campaignId,
+    campaignName: a.campaign?.name ?? null,
+    activityType: a.activityType,
+    occurredAt: a.occurredAt.toISOString(),
+    notes: a.notes,
+    messageText: a.messageText,
+    autoGenerated: a.autoGenerated,
+    createdAt: a.createdAt.toISOString(),
+  });
+
+  const data: DashboardData = {
+    today: {
+      overdueFollowUps: overdueCount,
+      dueToday: dueTodayCount,
+      recentAcceptances: (recentAcceptances as unknown as typeof recentActivityRaw).map(serializeActivity),
+      recentReplies: (recentReplies as unknown as typeof recentActivityRaw).map(serializeActivity),
+      needsVerification: needsVerificationCount,
+      recentlyAddedProspects: recentlyAdded.map(serializeProspectRow),
+      researchQueue: researchQueueCount,
+    },
+    pipeline,
+    recentActivity: recentActivityRaw.map(serializeActivity),
+    activityVolume,
+    performance: {
+      requestsSent: requests30,
+      acceptanceRate: requests30 > 0 ? accepted30 / requests30 : null,
+      messagesSent: messages30,
+      replyRate: messages30 > 0 ? replies30 / messages30 : null,
+      meetings: meetings30,
+      conversions,
+    },
+    totals: {
+      prospects: totalProspects,
+      companies: totalCompanies,
+      activeCampaigns,
+      archivedProspects,
+    },
+  };
+
+  return Response.json(data);
+}

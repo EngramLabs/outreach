@@ -1,0 +1,174 @@
+// Personal Outreach Operating System — Prisma schema
+// SQLite (single-file, private operator app). See DATABASE.md for rationale.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Operator. Single-user private app: one seeded account, cookie sessions.
+// ---------------------------------------------------------------------------
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Companies. Normalized names are enforced in app logic (dedupe on write).
+// ---------------------------------------------------------------------------
+model Company {
+  id           String   @id @default(cuid())
+  name         String
+  normalizedName String // lowercased, trimmed, punctuation-stripped — used for dedupe checks
+  website      String?
+  linkedinUrl  String?
+  industry     String?
+  location     String?
+  companySize  String?
+  source       String?
+  status       String   @default("Active") // Active | Archived
+  notes        String?
+  tags         String? // comma-separated
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  prospects   Prospect[]
+  activities  Activity[]
+
+  @@index([normalizedName])
+  @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// Campaigns. Groups related outreach.
+// ---------------------------------------------------------------------------
+model Campaign {
+  id             String    @id @default(cuid())
+  name           String
+  description    String?
+  targetAudience String?
+  status         String    @default("Draft") // Draft | Active | Paused | Completed | Archived
+  startDate      DateTime?
+  endDate        DateTime?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  prospects  Prospect[]
+  activities Activity[]
+
+  @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// Prospects. The core entity. Status lifecycle + denormalized key dates
+// (kept in sync by lib/automation.ts — activities remain the audit trail).
+// ---------------------------------------------------------------------------
+model Prospect {
+  id             String    @id @default(cuid())
+  firstName      String
+  lastName       String?
+  jobTitle       String?
+  companyId      String?
+  company        Company?  @relation(fields: [companyId], references: [id])
+  linkedinUrl    String?   @unique
+  email          String?   @unique
+  location       String?
+  source         String?
+  campaignId     String?
+  campaign       Campaign? @relation(fields: [campaignId], references: [id])
+  status         String    @default("Researching")
+  priority       String    @default("Medium") // Low | Medium | High
+  fitScore       Int? // 0–100, operator-assessed
+  researchNotes  String?
+  outreachAngle  String?
+  notes          String?
+  tags           String? // comma-separated
+
+  // Verification (explicit, field-level)
+  verificationStatus String? // null = not tracked | Unverified | Partial | Verified
+  verifiedFields     String? // JSON: {"name":true,"role":false,...}
+  verificationNotes  String?
+  verifiedAt         DateTime?
+
+  // Lifecycle dates (denormalized from activities by automation)
+  dateAdded                DateTime  @default(now())
+  connectionRequestDate    DateTime?
+  connectionAcceptedDate   DateTime?
+  firstMessageDate         DateTime?
+  lastContactDate          DateTime?
+  nextFollowUpDate         DateTime?
+  followUpCount            Int       @default(0)
+  archivedAt               DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  activities Activity[]
+
+  @@index([status])
+  @@index([companyId])
+  @@index([campaignId])
+  @@index([nextFollowUpDate])
+  @@index([dateAdded])
+  @@index([archivedAt])
+  @@index([priority])
+}
+
+// ---------------------------------------------------------------------------
+// Activities. Every meaningful outreach event. The audit trail for the whole
+// system — status automation writes here so changes stay auditable.
+// ---------------------------------------------------------------------------
+model Activity {
+  id          String    @id @default(cuid())
+  prospectId  String
+  prospect    Prospect  @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  companyId   String?
+  company     Company?  @relation(fields: [companyId], references: [id])
+  campaignId  String?
+  campaign    Campaign? @relation(fields: [campaignId], references: [id])
+  activityType String // see ACTIVITY_TYPES in lib/constants.ts
+  occurredAt  DateTime  @default(now())
+  notes       String?
+  messageText String?
+  autoGenerated Boolean @default(false) // true when written by status automation
+  createdAt   DateTime  @default(now())
+
+  @@index([prospectId])
+  @@index([companyId])
+  @@index([campaignId])
+  @@index([activityType])
+  @@index([occurredAt])
+}
+
+// ---------------------------------------------------------------------------
+// Saved views. Named filter presets for the prospects table.
+// ---------------------------------------------------------------------------
+model SavedView {
+  id          String   @id @default(cuid())
+  name        String
+  entityType  String   @default("prospect")
+  filtersJson String // serialized ProspectsQuery
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([entityType])
+}
+
+// ---------------------------------------------------------------------------
+// Settings. Simple key/value store for operator preferences.
+// ---------------------------------------------------------------------------
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}

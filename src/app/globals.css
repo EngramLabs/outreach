@@ -1,0 +1,270 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+  Outreach OS — design tokens.
+  Deliberate choices (rationale in DESIGN.md):
+  - Neutral warm-gray "paper" surfaces; one restrained green accent.
+    Green = "proceed/growth" semantics for an outreach tool; no blue/indigo.
+  - Dark mode is designed separately (deeper, green-cast charcoal, brighter
+    accent, inverted surface elevation) — not an inversion of light.
+  - Small radii (technical tool feel), 1px borders, no decorative shadows.
+  - Geist Sans for UI, Geist Mono for numerals/URLs/identifiers.
+*/
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-pressed: var(--primary-pressed);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-surface-subtle: var(--surface-subtle);
+  --color-surface-raised: var(--surface-raised);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --radius: 0.5rem;
+
+  /* Neutral surfaces — warm paper */
+  --background: oklch(0.982 0.003 95);
+  --foreground: oklch(0.245 0.012 100);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.245 0.012 100);
+  --surface-subtle: oklch(0.958 0.004 95);
+  --surface-raised: oklch(1 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.245 0.012 100);
+  --secondary: oklch(0.955 0.004 95);
+  --secondary-foreground: oklch(0.32 0.012 100);
+  --muted: oklch(0.955 0.004 95);
+  --muted-foreground: oklch(0.512 0.012 100);
+  --accent: oklch(0.945 0.018 155);
+  --accent-foreground: oklch(0.36 0.055 155);
+  --border: oklch(0.905 0.004 95);
+  --border-strong: oklch(0.855 0.005 95);
+  --input: oklch(0.905 0.004 95);
+
+  /* Primary — deep pine green */
+  --primary: oklch(0.44 0.085 155);
+  --primary-foreground: oklch(0.985 0.005 155);
+  --primary-hover: oklch(0.385 0.085 155);
+  --primary-pressed: oklch(0.33 0.08 155);
+  --ring: oklch(0.55 0.09 155);
+
+  /* Semantic */
+  --success: oklch(0.52 0.12 152);
+  --success-foreground: oklch(0.985 0.01 152);
+  --warning: oklch(0.58 0.115 70);
+  --warning-foreground: oklch(0.985 0.01 70);
+  --danger: oklch(0.55 0.185 27);
+  --danger-foreground: oklch(0.985 0.01 27);
+  --destructive: oklch(0.55 0.185 27);
+  --destructive-foreground: oklch(0.985 0.01 27);
+  --info: oklch(0.5 0.06 200);
+  --info-foreground: oklch(0.985 0.01 200);
+
+  /* Status badge tones (group → subtle bg + readable fg) */
+  --tone-research-bg: oklch(0.955 0.004 95);
+  --tone-research-fg: oklch(0.46 0.015 100);
+  --tone-ready-bg: oklch(0.943 0.026 155);
+  --tone-ready-fg: oklch(0.4 0.08 155);
+  --tone-active-bg: oklch(0.955 0.036 75);
+  --tone-active-fg: oklch(0.46 0.095 70);
+  --tone-responding-bg: oklch(0.935 0.045 152);
+  --tone-responding-fg: oklch(0.37 0.1 152);
+  --tone-negative-bg: oklch(0.948 0.02 25);
+  --tone-negative-fg: oklch(0.46 0.12 25);
+  --tone-archived-bg: oklch(0.955 0.004 95);
+  --tone-archived-fg: oklch(0.5 0.01 100);
+
+  /* Charts: green family + amber + red + teal, harmonized */
+  --chart-1: oklch(0.55 0.11 155);
+  --chart-2: oklch(0.68 0.09 152);
+  --chart-3: oklch(0.78 0.07 152);
+  --chart-4: oklch(0.72 0.1 75);
+  --chart-5: oklch(0.6 0.16 27);
+
+  --sidebar: oklch(0.968 0.004 95);
+  --sidebar-foreground: oklch(0.32 0.012 100);
+  --sidebar-primary: oklch(0.44 0.085 155);
+  --sidebar-primary-foreground: oklch(0.985 0.005 155);
+  --sidebar-accent: oklch(0.938 0.008 95);
+  --sidebar-accent-foreground: oklch(0.245 0.012 100);
+  --sidebar-border: oklch(0.905 0.004 95);
+  --sidebar-ring: oklch(0.55 0.09 155);
+}
+
+.dark {
+  /* Dark workbench — deep green-cast charcoal, separately tuned elevation */
+  --background: oklch(0.212 0.005 160);
+  --foreground: oklch(0.925 0.005 160);
+  --card: oklch(0.254 0.006 160);
+  --card-foreground: oklch(0.925 0.005 160);
+  --surface-subtle: oklch(0.185 0.005 160);
+  --surface-raised: oklch(0.285 0.007 160);
+  --popover: oklch(0.254 0.006 160);
+  --popover-foreground: oklch(0.925 0.005 160);
+  --secondary: oklch(0.28 0.006 160);
+  --secondary-foreground: oklch(0.9 0.005 160);
+  --muted: oklch(0.28 0.006 160);
+  --muted-foreground: oklch(0.635 0.01 160);
+  --accent: oklch(0.305 0.025 160);
+  --accent-foreground: oklch(0.9 0.02 155);
+  --border: oklch(1 0 0 / 9%);
+  --border-strong: oklch(1 0 0 / 16%);
+  --input: oklch(1 0 0 / 12%);
+
+  --primary: oklch(0.72 0.11 155);
+  --primary-foreground: oklch(0.17 0.03 155);
+  --primary-hover: oklch(0.77 0.11 155);
+  --primary-pressed: oklch(0.65 0.1 155);
+  --ring: oklch(0.5 0.07 155);
+
+  --success: oklch(0.7 0.12 152);
+  --success-foreground: oklch(0.17 0.03 152);
+  --warning: oklch(0.74 0.1 75);
+  --warning-foreground: oklch(0.19 0.03 75);
+  --danger: oklch(0.66 0.15 25);
+  --danger-foreground: oklch(0.16 0.03 25);
+  --destructive: oklch(0.66 0.15 25);
+  --destructive-foreground: oklch(0.16 0.03 25);
+  --info: oklch(0.68 0.07 200);
+  --info-foreground: oklch(0.17 0.02 200);
+
+  --tone-research-bg: oklch(0.29 0.006 160);
+  --tone-research-fg: oklch(0.72 0.012 160);
+  --tone-ready-bg: oklch(0.3 0.04 155);
+  --tone-ready-fg: oklch(0.8 0.1 155);
+  --tone-active-bg: oklch(0.33 0.05 75);
+  --tone-active-fg: oklch(0.83 0.09 75);
+  --tone-responding-bg: oklch(0.32 0.06 152);
+  --tone-responding-fg: oklch(0.83 0.11 152);
+  --tone-negative-bg: oklch(0.33 0.04 25);
+  --tone-negative-fg: oklch(0.79 0.1 25);
+  --tone-archived-bg: oklch(0.29 0.006 160);
+  --tone-archived-fg: oklch(0.62 0.01 160);
+
+  --chart-1: oklch(0.68 0.1 155);
+  --chart-2: oklch(0.55 0.09 152);
+  --chart-3: oklch(0.42 0.06 152);
+  --chart-4: oklch(0.74 0.09 75);
+  --chart-5: oklch(0.63 0.13 25);
+
+  --sidebar: oklch(0.185 0.005 160);
+  --sidebar-foreground: oklch(0.82 0.008 160);
+  --sidebar-primary: oklch(0.72 0.11 155);
+  --sidebar-primary-foreground: oklch(0.17 0.03 155);
+  --sidebar-accent: oklch(0.26 0.008 160);
+  --sidebar-accent-foreground: oklch(0.925 0.005 160);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.5 0.07 155);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    scrollbar-color: var(--border-strong) transparent;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "cv11";
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 25%, transparent);
+  }
+}
+
+@layer utilities {
+  /* Numerals: tabular figures for data columns */
+  .font-num {
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+  /* Status tone chips */
+  .tone-research { background: var(--tone-research-bg); color: var(--tone-research-fg); }
+  .tone-ready { background: var(--tone-ready-bg); color: var(--tone-ready-fg); }
+  .tone-active { background: var(--tone-active-bg); color: var(--tone-active-fg); }
+  .tone-responding { background: var(--tone-responding-bg); color: var(--tone-responding-fg); }
+  .tone-negative { background: var(--tone-negative-bg); color: var(--tone-negative-fg); }
+  .tone-archived { background: var(--tone-archived-bg); color: var(--tone-archived-fg); }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Compact scrollbars for dense scroll areas */
+  .scroll-slim {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+  .scroll-slim::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scroll-slim::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 4px;
+  }
+  .scroll-slim::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
